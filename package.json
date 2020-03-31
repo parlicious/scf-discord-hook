@@ -7,5 +7,13 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "aws": "0.0.3-2",
+    "aws-sdk": "^2.649.0",
+    "axios": "^0.19.2",
+    "discord.js": "^12.1.1",
+    "hookcord": "^2.0.2",
+    "mailparser": "^2.7.7"
+  }
 }
