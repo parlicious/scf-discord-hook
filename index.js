@@ -30,10 +30,10 @@ async function sendDiscordWebhookForFlights(flightInfo) {
     await Hook.fire();
 }
 
-async function getGoogleFlightsLink(lines){
+async function getGoogleFlightsLink(lines) {
     const flightsLinks = await Promise.all(lines.join('').match(/\bhttps?:\/\/\S+/gi)
         .map(url => {
-            if(url.includes('>')){
+            if (url.includes('>')) {
                 return url.substr(0, url.indexOf('>'));
             }
 
@@ -45,17 +45,17 @@ async function getGoogleFlightsLink(lines){
 }
 
 async function getRedirectFromLink(link) {
-    if(link.includes('www.google.com/flights')){
+    if (link.includes('www.google.com/flights')) {
         return link;
     }
-    try{
+    try {
         const resp = await axios.get(link, {
             maxRedirects: 0,
             validateStatus: false
         });
 
         return encodeURI(resp.headers.location);
-    } catch(error){
+    } catch (error) {
         console.error(error);
         return "";
     }
@@ -115,63 +115,16 @@ const getEmail = async (bucket, key) => {
     return data;
 };
 
-const test = {
-    "Records": [
-        {
-            "eventVersion": "2.1",
-            "eventSource": "aws:s3",
-            "awsRegion": "us-east-1",
-            "eventTime": "2019-09-28T15:48:04.352Z",
-            "eventName": "ObjectCreated:Put",
-            "userIdentity": {
-                "principalId": "AWS:AIDAIE26RTG3F45XIHQFI"
-            },
-            "requestParameters": {
-                "sourceIPAddress": "10.88.185.132"
-            },
-            "responseElements": {
-                "x-amz-request-id": "50EA33958447F3FA",
-                "x-amz-id-2": "DLbyxBIPPGlFwbe0terpTQwrrVxWB4OT00wQxvW95GWaLnDAGzAaJJJk2Puo8UK+mbQYgx+IOD4="
-            },
-            "s3": {
-                "s3SchemaVersion": "1.0",
-                "configurationId": "d829fa27-35c7-48c5-aba5-c73a253836e8",
-                "bucket": {
-                    "name": "parlicious-emails-scf",
-                    "ownerIdentity": {
-                        "principalId": "AX1W6INXTNCXR"
-                    },
-                    "arn": "arn:aws:s3:::parlicious-emails-scf"
-                },
-                "object": {
-                    "key": "1iq2rgnrfura12vgr60ssa7ot04k9ulsccuat401",
-                    "size": 76125,
-                    "eTag": "cc97626a97e080f6ba60cc9997615716",
-                    "sequencer": "005D8F80B4497B898A"
-                }
-            }
-        }
-    ]
-};
-
 exports.handler = async (event) => {
-    console.log('starting');
     const key = event.Records[0].s3.object.key;
     const bucket = event.Records[0].s3.bucket.name;
     const email = await getEmail(bucket, key);
     const flightInfo = await parseCheapFlightsEmailToText(email.Body);
-    console.log(flightInfo);
     await sendDiscordWebhookForFlights(flightInfo);
-
-    const response = {
+    return {
         statusCode: 200,
         body: JSON.stringify(event),
     };
-    return response;
 };
 
-
-
-
-// exports.handler(test).then().catch(console.error);
 
