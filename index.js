@@ -4,18 +4,21 @@ const Discord = require('discord.js');
 const axios = require('axios').default;
 const AWS = require('aws-sdk');
 const s3 = new AWS.S3();
+const fs = require('fs');
+const jsdom = require("jsdom");
+const { JSDOM } = jsdom;
 
 const id = process.env.WEBHOOK_ID;
 const secret = process.env.WEBHOOK_SECRET;
 
 const simpleParser = require('mailparser').simpleParser;
-
+const urlPrefix = 'http://scf-email-pages.s3-website-us-east-1.amazonaws.com/'
 
 function convertFlightInfoToDiscordEmbed(flightInfo) {
     return new Discord.MessageEmbed()
         .setColor('#1be1f2')
         .setTitle(flightInfo.subject)
-        .setURL(flightInfo.link)
+        .setURL(urlPrefix + flightInfo.fileName)
         .setDescription(flightInfo.prices.join("\n"));
 }
 
@@ -66,13 +69,34 @@ function parseUrlFromLine(line) {
 
 }
 
+async function uploadEmailHtml(email) {
+    const mail = await simpleParser(email, {});
+    const html = sanitizePrivateLinks(mail.html);
+    const fileName = Date.now() + '.html'
+    const params = {
+        Body: html,
+        Bucket: "scf-email-pages",
+        Key: fileName,
+        ContentType: 'text/html'
+    };
+
+    s3.putObject(params, function(err, data) {
+        if (err) console.log(err, err.stack); // an error occurred
+        else     console.log(data);           // successful response
+    });
+
+    return fileName;
+}
+
 async function parseCheapFlightsEmailToText(email) {
     const mail = await simpleParser(email, {});
     const subject = mail.subject.replace("Fwd: ", "");
     const body = await parseBody(mail.text);
+    const fileName = await uploadEmailHtml(email);
     return {
         ...body,
-        subject
+        subject,
+        fileName
     }
 }
 
@@ -126,5 +150,13 @@ exports.handler = async (event) => {
         body: JSON.stringify(event),
     };
 };
+
+const sanitizePrivateLinks = (html) => {
+    const dom = new JSDOM(html);
+    dom.window.document.getElementsByClassName('footer-container')[0].remove();
+    return dom.window.document.documentElement.outerHTML;
+}
+
+
 
 
